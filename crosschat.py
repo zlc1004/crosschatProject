@@ -81,6 +81,13 @@ class Platform:
 
     def __repr__(self) -> str:
         return f"Platform(name={self.name})"
+    
+    def run(self) -> None:
+        print(f"Running platform {self.name}...")
+        # Simulate some platform-specific behavior
+        # For example, connecting to an API, etc.
+        pass
+        # Simulate some platform-specific behavior
 
 
 class Channel:
