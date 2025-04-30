@@ -3,26 +3,31 @@ import crosschat
 # Step 1: Initialize CrossChat
 cc = crosschat.CrossChat()
 
+
 # Step 2: Create and add platforms
 class DiscordPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "discord"
 
+
 class SlackPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "slack"
+
 
 class TelegramPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "telegram"
 
+
 class GoogleChatPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "google_chat"
+
 
 discord = DiscordPlatform(cc)
 slack = SlackPlatform(cc)
@@ -43,11 +48,7 @@ discord_channel.set_id("google_chat", 400)
 cc.add_channel(discord_channel)
 
 # Step 4: Create and add a user
-user = crosschat.User(cc, "Alice")
-user.set_id("discord", 1)
-user.set_id("slack", 2)
-user.set_id("telegram", 3)
-user.set_id("google_chat", 4)
+user = crosschat.User("Alice", "alice123")
 cc.add_user(user)
 
 # Step 5: Create and add original message

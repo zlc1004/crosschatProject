@@ -1,11 +1,10 @@
-from typing import Union, Optional
+from typing import Union, Optional, Any
 import random
 
 class CrossChat:
     def __init__(self):
         self.channels: list["Channel"] = []
         self.users: list["User"] = []
-        self.messages: list["Message"] = []
         self.platforms: dict[str, "Platform"] = {}
 
     def add_platform(self, name: str, platform: "Platform") -> None:
@@ -88,6 +87,11 @@ class Platform:
         # For example, connecting to an API, etc.
         pass
         # Simulate some platform-specific behavior
+    
+    def health_check(self) -> bool:
+        # Simulate a health check for the platform
+        print(f"Performing health check for platform {self.name}...")
+        return True
 
 
 class Channel:
@@ -95,6 +99,7 @@ class Channel:
         self.name = name
         self.ids: dict[str, int] = {}
         self.crosschat = crosschat
+        self.extra_data: dict[str, str] = {}
 
     def get_id(self, platform: Union[str, "Platform"]) -> Optional[int]:
         key = platform if isinstance(platform, str) else platform.name
@@ -103,6 +108,12 @@ class Channel:
     def set_id(self, platform: Union[str, "Platform"], id: int) -> None:
         key = platform if isinstance(platform, str) else platform.name
         self.ids[key] = id
+
+    def set_extra_data(self, key: str, value: Any) -> None:
+        self.extra_data[key] = value
+    
+    def get_extra_data(self, key: str) -> Optional[Any]:
+        return self.extra_data.get(key, None)
 
     def __repr__(self) -> str:
         return f"Channel(name={self.name}, ids={self.ids})"
@@ -119,24 +130,20 @@ class Channel:
 
 
 class User:
-    def __init__(
-        self, crosschat: CrossChat, name: str, ids: Optional[dict[str, int]] = None
-    ):
-        self.name = name
-        self.ids: dict[str, int] = ids if ids is not None else {}
-        self.crosschat = crosschat
-
-    def get_id(self, platform: Union[str, "Platform"]) -> Optional[int]:
-        key = platform if isinstance(platform, str) else platform.name
-        return self.ids.get(key)
-
-    def set_id(self, platform: Union[str, "Platform"], id: int) -> None:
-        key = platform if isinstance(platform, str) else platform.name
-        self.ids[key] = id
-
+    def __init__(self, display_name: str, username: str, profile_picture: str = None):
+        self.display_name = display_name
+        self.username = username
+        self.name = f"{display_name}(@{username})"
+        self.profile_picture = profile_picture
+    
+    def get_profile_picture(self) -> str:
+        return self.profile_picture if self.profile_picture else "https://i.pinimg.com/474x/25/1c/e1/251ce139d8c07cbcc9daeca832851719.jpg"
+    
+    def get_name(self) -> str:
+        return f"{self.display_name}(@{self.username})"
+    
     def __repr__(self) -> str:
-        return f"User(name={self.name}, ids={self.ids})"
-
+        return f"User(display_name={self.display_name}, username={self.username})"
 
 class OriginalMessage:
     def __init__(
@@ -206,6 +213,10 @@ class Message:
             platform.edit_message(self.channel, self, newContent)
         self.content = newContent
         
+    def delete(self) -> None:
+        platforms = self.crosschat.platforms.values()
+        for platform in platforms:
+            platform.delete_message(self.channel, self)
 
     def __repr__(self) -> str:
         return (
