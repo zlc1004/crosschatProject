@@ -1,24 +1,32 @@
 import crosschat
 import discord
-from typing import Union, Optional
+from typing import Optional
 import threading
 
 
 class DiscordPlatform(crosschat.Platform):
-    def __init__(self, crosschat: crosschat.CrossChat, token: str, name: str = "discord"):
+    """
+    A platform implementation for Discord, integrating with the CrossChat framework.
+
+    Attributes:
+        crosschat (crosschat.CrossChat): The CrossChat instance managing this platform.
+        name (str): The name of the platform, default is "discord".
+        client (discord.Client): The Discord client instance.
+        token (str): The bot token used to authenticate with Discord.
+        thread (threading.Thread): The thread running the Discord client.
+        running (bool): Indicates whether the platform is running.
+    """
+
+    def __init__(
+        self, crosschat: crosschat.CrossChat, token: str, name: str = "discord"
+    ):
         """
-        Initializes the Discord platform integration for the CrossChat project.
+        Initializes the DiscordPlatform.
+
         Args:
-            crosschat (crosschat.CrossChat): An instance of the CrossChat class to enable cross-platform communication.
-            token (str): The Discord bot token used for authentication.
+            crosschat (crosschat.CrossChat): The CrossChat instance managing this platform.
+            token (str): The bot token used to authenticate with Discord.
             name (str, optional): The name of the platform. Defaults to "discord".
-        Attributes:
-            name (str): The name of the platform.
-            client (discord.Client): The Discord client instance with all intents enabled.
-            token (str): The Discord bot token.
-            thread (threading.Thread): A daemon thread to run the Discord client.
-            running (bool): A flag indicating whether the bot is running.
-            headers (dict): HTTP headers used for making requests.
         """
         super().__init__(crosschat)
         self.name = name
@@ -30,16 +38,23 @@ class DiscordPlatform(crosschat.Platform):
             target=self.client.run, args=(self.token,), daemon=True
         )
         self.running = False
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-            "content-type": "application/json",
-        }
 
     async def on_ready(self):
+        """
+        Event handler triggered when the Discord client is ready.
+
+        Prints the bot's username and sets the running status to True.
+        """
         print(f"Logged in as {self.client.user}")
         self.running = True
 
     async def on_message(self, message: discord.Message):
+        """
+        Event handler triggered when a message is received on Discord.
+
+        Args:
+            message (discord.Message): The message object received from Discord.
+        """
         # Ignore messages from the bot itself
         if message.author == self.client.user:
             return
@@ -49,15 +64,26 @@ class DiscordPlatform(crosschat.Platform):
         if channel:
             # Get the corresponding user in CrossChat
             user = crosschat.User(message.author.display_name, message.author.name)
+            attachments = [crosschat.Attachment(i.url) for i in message.attachments]
             # Create an original message and wrap it in a Message object
             original_msg = crosschat.OriginalMessage(
-                self.crosschat, channel, user, message.content, message.id, self
+                self.crosschat, channel, user, message.content, message.id, self, attachments
             )
             wrapped_msg = crosschat.Message(self.crosschat, original_msg)
             # Broadcast the message
             wrapped_msg.broadcast()
 
     def make_webhook(self, id: int, token: str) -> None:
+        """
+        Creates a partial webhook object.
+
+        Args:
+            id (int): The webhook ID.
+            token (str): The webhook token.
+
+        Returns:
+            discord.SyncWebhook: The created webhook object.
+        """
         return discord.SyncWebhook.partial(id=id, token=token)
 
     def send_message(
@@ -65,18 +91,45 @@ class DiscordPlatform(crosschat.Platform):
         channel: crosschat.Channel,
         content: str,
         user: crosschat.User = crosschat.User,
+        reply: Optional[crosschat.OriginalMessage] = None,
+        attachments: list[crosschat.Attachment] = [],
     ) -> int:
+        """
+        Sends a message to a Discord channel.
+
+        Args:
+            channel (crosschat.Channel): The target channel.
+            content (str): The message content.
+            user (crosschat.User, optional): The user sending the message. Defaults to crosschat.User.
+            reply (Optional[crosschat.OriginalMessage], optional): The message being replied to. Defaults to None.
+            attachments (list[crosschat.Attachment], optional): Attachments to include. Defaults to an empty list.
+
+        Returns:
+            int: The ID of the sent message, or 0 if the channel is not found.
+        """
         # Send the message to the specified Discord channel
         discord_channel = self.client.get_channel(channel.get_id(self.name))
         if discord_channel:
             webhook: discord.Webhook = channel.get_extra_data("discord_webhook")
+            if not webhook:
+                print(f"Webhook not found in channel {channel}.")
+                return 0
             message: discord.WebhookMessage = webhook.send(
-                content=content,
+                content=self.crosschat.make_reply_str(reply) + content,
                 username=user.get_name(),
                 avatar_url=user.get_profile_picture(),
                 wait=1,
             )
             message_id = message.id
+            for attachment in attachments:
+                message.reply(
+                    content=attachment.file_url,
+                    username=user.get_name(),
+                    avatar_url=user.get_profile_picture()
+                )
+                print(
+                    f"Uploaded attachment: '{attachment.file_url}' in channel {channel} on Discord."
+                )
             print(
                 f"Sent message: '{content}' in channel {channel} on Discord. ID: {message_id}"
             )
@@ -84,11 +137,16 @@ class DiscordPlatform(crosschat.Platform):
         return 0  # In case the channel is not found
 
     def edit_message(
-        self,
-        channel: crosschat.Channel,
-        message: Union[crosschat.Message, crosschat.OriginalMessage],
-        new_content: str,
+        self, channel: crosschat.Channel, message: crosschat.Message, new_content: str
     ) -> None:
+        """
+        Edits a message in a Discord channel.
+
+        Args:
+            channel (crosschat.Channel): The target channel.
+            message (crosschat.Message): The message to edit.
+            new_content (str): The new content for the message.
+        """
         # Get the message ID from CrossChat and edit the message on Discord
         discord_channel = self.client.get_channel(channel.get_id(self.name))
         if discord_channel:
@@ -101,8 +159,15 @@ class DiscordPlatform(crosschat.Platform):
     def delete_message(
         self,
         channel: crosschat.Channel,
-        message: Union[crosschat.Message, crosschat.OriginalMessage],
+        message: crosschat.Message,
     ) -> None:
+        """
+        Deletes a message from a Discord channel.
+
+        Args:
+            channel (crosschat.Channel): The target channel.
+            message (crosschat.Message): The message to delete.
+        """
         # Get the message ID from CrossChat and delete the message on Discord
         discord_channel = self.client.get_channel(channel.get_id(self.name))
         if discord_channel:
@@ -113,8 +178,18 @@ class DiscordPlatform(crosschat.Platform):
     def get_message(
         self,
         channel: crosschat.Channel,
-        message: Union[crosschat.Message, crosschat.OriginalMessage],
+        message: crosschat.Message,
     ) -> Optional[crosschat.OriginalMessage]:
+        """
+        Retrieves a message from a Discord channel.
+
+        Args:
+            channel (crosschat.Channel): The target channel.
+            message (crosschat.Message): The message to retrieve.
+
+        Returns:
+            Optional[crosschat.OriginalMessage]: The retrieved message, or None if not found.
+        """
         # Get the message ID from CrossChat and retrieve the message from Discord
         discord_channel = self.client.get_channel(channel.get_id(self.name))
         if discord_channel:
@@ -134,19 +209,26 @@ class DiscordPlatform(crosschat.Platform):
             return wrapped_msg
         return None
 
-    def upload_attachment(self, channel: crosschat.Channel, file_path: str) -> None:
-        # Upload an attachment to the specified Discord channel
-        discord_channel = self.client.get_channel(channel.get_id(self.name))
-        if discord_channel:
-            with open(file_path, "rb") as f:
-                discord_channel.send(file=discord.File(f))
-                print(
-                    f"Uploaded attachment: '{file_path}' in channel {discord_channel.name} on Discord."
-                )
-
     def run(self) -> None:
+        """
+        Starts the Discord client in a separate thread.
+        """
         # Start the Discord client in a separate thread
         self.thread.start()
 
     def health_check(self) -> bool:
+        """
+        Performs a health check to determine if the platform is running.
+
+        Returns:
+            bool: True if the platform is running, False otherwise.
+        """
         return self.running
+
+    def exit(self):
+        """
+        Stops the Discord client and terminates the thread.
+        """
+        self.client.close()
+        self.thread.join()
+        self.running = False

@@ -30,10 +30,8 @@ channel.set_extra_data(
     ),
 )
 
-discord.run()
-
-while not discord.health_check():
-    time.sleep(1)
+app.run()
+app.wait_for_platforms()
 
 message = crosschat.OriginalMessage(
     app,
@@ -48,10 +46,10 @@ wrapped_message = crosschat.Message(app, message)
 wrapped_message.broadcast()
 print("Message sent successfully!")
 
-time.sleep(1)  # Wait for 5 seconds before editing
+time.sleep(1)  # Wait for 1 seconds before editing
 print("Editing message...")
 wrapped_message.edit("edited message")
 
-time.sleep(1)  # Wait for 5 seconds before deleting
+time.sleep(1)  # Wait for 1 seconds before deleting
 print("Deleting message...")
 wrapped_message.delete()
