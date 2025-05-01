@@ -33,23 +33,7 @@ channel.set_extra_data(
 app.run()
 app.wait_for_platforms()
 
-message = crosschat.OriginalMessage(
-    app,
-    channel,
-    crosschat.User("Alice", "alice123"),
-    "Hello from Discord!",
-    123,
-    telegram,
-)
 
-wrapped_message = crosschat.Message(app, message)
-wrapped_message.broadcast()
-print("Message sent successfully!")
+print(app)
 
-time.sleep(1)  # Wait for 1 seconds before editing
-print("Editing message...")
-wrapped_message.edit("edited message")
-
-time.sleep(1)  # Wait for 1 seconds before deleting
-print("Deleting message...")
-wrapped_message.delete()
+app.exit()

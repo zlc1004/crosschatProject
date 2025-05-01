@@ -1,7 +1,8 @@
 from typing import Union, Optional, Any
 import random
 import time
-
+import asyncio
+import threading
 
 def override(func):
     """
@@ -35,6 +36,11 @@ class CrossChat:
         self.users: list["User"] = []
         self.platforms: dict[str, "Platform"] = {}
         self.messages: list["Message"] = []
+        self.loop = asyncio.new_event_loop()
+        self.thread = threading.Thread(
+            target=self.loop.run_forever,
+            daemon=True
+        )
 
     def add_platform(self, name: str, platform: "Platform") -> None:
         """
@@ -159,6 +165,8 @@ class CrossChat:
         for platform in self.platforms.values():
             platform.run()
         print("Running CrossChat and all platforms...")
+        self.thread.start()
+        
 
     def exit(self) -> None:
         """
@@ -168,6 +176,15 @@ class CrossChat:
             platform.exit()
         print("Exiting CrossChat and closing all platforms...")
 
+    def wait_for_task(self, task: asyncio.Task) -> None:
+        """
+        Waits for a specific task to complete.
+
+        Args:
+            task (asyncio.Task): The task to wait for.
+        """
+        while not task.done():
+            time.sleep(0.1)
 
 class Platform:
     """

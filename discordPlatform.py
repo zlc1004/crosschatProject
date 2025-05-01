@@ -1,8 +1,6 @@
 import crosschat
 import discord
 from typing import Optional
-import threading
-
 
 class DiscordPlatform(crosschat.Platform):
     """
@@ -28,16 +26,20 @@ class DiscordPlatform(crosschat.Platform):
             token (str): The bot token used to authenticate with Discord.
             name (str, optional): The name of the platform. Defaults to "discord".
         """
-        super().__init__(crosschat)
+        super().__init__(crosschat=crosschat, name=name)
         self.name = name
         self.client = discord.Client(intents=discord.Intents.all())
         self.client.event(self.on_ready)
         self.client.event(self.on_message)
         self.token = token
-        self.thread = threading.Thread(
-            target=self.client.run, args=(self.token,), daemon=True
-        )
         self.running = False
+        self.add_to_crosschat()
+        self.task = None
+        
+
+    async def runner(self, token: str):
+        async with self.client:
+            await self.client.start(token, reconnect=True)
 
     async def on_ready(self):
         """
@@ -67,7 +69,13 @@ class DiscordPlatform(crosschat.Platform):
             attachments = [crosschat.Attachment(i.url) for i in message.attachments]
             # Create an original message and wrap it in a Message object
             original_msg = crosschat.OriginalMessage(
-                self.crosschat, channel, user, message.content, message.id, self, attachments
+                self.crosschat,
+                channel,
+                user,
+                message.content,
+                message.id,
+                self,
+                attachments,
             )
             wrapped_msg = crosschat.Message(self.crosschat, original_msg)
             # Broadcast the message
@@ -125,7 +133,7 @@ class DiscordPlatform(crosschat.Platform):
                 message.reply(
                     content=attachment.file_url,
                     username=user.get_name(),
-                    avatar_url=user.get_profile_picture()
+                    avatar_url=user.get_profile_picture(),
                 )
                 print(
                     f"Uploaded attachment: '{attachment.file_url}' in channel {channel} on Discord."
@@ -213,9 +221,15 @@ class DiscordPlatform(crosschat.Platform):
         """
         Starts the Discord client in a separate thread.
         """
+        discord.utils.setup_logging(
+                handler=discord.utils.MISSING,
+                formatter=discord.utils.MISSING,
+                level=discord.utils.MISSING,
+                root=False,
+            )
         # Start the Discord client in a separate thread
-        self.thread.start()
-
+        self.task = self.crosschat.loop.create_task(self.runner(self.token))
+    
     def health_check(self) -> bool:
         """
         Performs a health check to determine if the platform is running.
@@ -223,12 +237,15 @@ class DiscordPlatform(crosschat.Platform):
         Returns:
             bool: True if the platform is running, False otherwise.
         """
-        return self.running
+        return self.running and self.client.is_ready()
 
     def exit(self):
         """
         Stops the Discord client and terminates the thread.
         """
-        self.client.close()
-        self.thread.join()
+        print("Stopping Discord client...")
+        t = self.crosschat.loop.create_task(self.client.close())
+        self.crosschat.wait_for_task(t)
+        self.task.cancel()
+        print("Discord client stopped.")
         self.running = False
