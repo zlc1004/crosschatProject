@@ -2,13 +2,26 @@ import crosschat
 import discord
 from typing import Union, Optional
 import threading
-import asyncio
 
 
 class DiscordPlatform(crosschat.Platform):
-    def __init__(self, crosschat: crosschat.CrossChat, token: str):
+    def __init__(self, crosschat: crosschat.CrossChat, token: str, name: str = "discord"):
+        """
+        Initializes the Discord platform integration for the CrossChat project.
+        Args:
+            crosschat (crosschat.CrossChat): An instance of the CrossChat class to enable cross-platform communication.
+            token (str): The Discord bot token used for authentication.
+            name (str, optional): The name of the platform. Defaults to "discord".
+        Attributes:
+            name (str): The name of the platform.
+            client (discord.Client): The Discord client instance with all intents enabled.
+            token (str): The Discord bot token.
+            thread (threading.Thread): A daemon thread to run the Discord client.
+            running (bool): A flag indicating whether the bot is running.
+            headers (dict): HTTP headers used for making requests.
+        """
         super().__init__(crosschat)
-        self.name = "discord"
+        self.name = name
         self.client = discord.Client(intents=discord.Intents.all())
         self.client.event(self.on_ready)
         self.client.event(self.on_message)
@@ -80,9 +93,8 @@ class DiscordPlatform(crosschat.Platform):
         discord_channel = self.client.get_channel(channel.get_id(self.name))
         if discord_channel:
             webhook: discord.Webhook = channel.get_extra_data("discord_webhook")
-            message:discord.WebhookMessage = webhook.edit_message(
-                message_id=message.get_id(self.name),
-                content=new_content
+            message: discord.WebhookMessage = webhook.edit_message(
+                message_id=message.get_id(self.name), content=new_content
             )
             print(f"Edited message with ID {message.id} to: '{message.content}'")
 
@@ -95,9 +107,7 @@ class DiscordPlatform(crosschat.Platform):
         discord_channel = self.client.get_channel(channel.get_id(self.name))
         if discord_channel:
             webhook: discord.Webhook = channel.get_extra_data("discord_webhook")
-            webhook.delete_message(
-                message.get_id(self.name)
-            )
+            webhook.delete_message(message.get_id(self.name))
             print(f"Deleted message with ID {message.get_id(self.name)}")
 
     def get_message(
