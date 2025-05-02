@@ -8,12 +8,20 @@ with open("./tokens/tg", "r") as f:
     telegramBotToken = f.read().strip()
 
 app = crosschat.CrossChat()
-discord = discordPlatform.DiscordPlatform(app, discordBotToken)
+print(app)
 telegram = telegramPlatform.TelegramPlatform(app, telegramBotToken)
+print("telegram")
+discord = discordPlatform.DiscordPlatform(app, discordBotToken)
+print("discord")
 platform = crosschat.Platform(app, "test")
+print("platform")
 platform.add_to_crosschat()
 
+print("added to crosschat")
+print(app)
+
 channel = crosschat.Channel(app, "general")
+print("channel")
 
 channel.set_id("discord", 1367251777606385777)
 channel.set_id("telegram", -4677825942)
@@ -25,7 +33,11 @@ channel.set_extra_data(
     ),
 )
 
+print(channel)
+
+print("running")
 app.run()
+print("running")
 app.wait_for_platforms()
 
 print(app)

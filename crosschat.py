@@ -163,10 +163,12 @@ class CrossChat:
         """
         Starts all platforms and runs the CrossChat system.
         """
+        self.thread.start()
+        print("Starting CrossChat and all platforms...")
         for platform in self.platforms.values():
+            print(f"Starting platform {platform.name}...")
             platform.run()
         print("Running CrossChat and all platforms...")
-        self.thread.start()
         
 
     def exit(self) -> None:
@@ -186,6 +188,17 @@ class CrossChat:
         """
         while not task.done():
             time.sleep(0.1)
+    
+    def run_coroutine(self, coroutine: asyncio.coroutine) -> None:
+        """
+        Runs a coroutine in the event loop.
+
+        Args:
+            coroutine (asyncio.coroutine): The coroutine to run.
+        """
+        future = asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+        self.wait_for_task(future)
+        return future.result()
 
 class Platform:
     """
