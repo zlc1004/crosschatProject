@@ -41,6 +41,7 @@ class CrossChat:
             target=self.loop.run_forever,
             daemon=True
         )
+        asyncio.set_event_loop(self.loop)
 
     def add_platform(self, name: str, platform: "Platform") -> None:
         """

@@ -1,27 +1,22 @@
 import crosschat
 import discordPlatform
-import time
+import telegramPlatform
 
-with open("./tokens/test", "r") as f:
-    botToken = f.read().strip()
-
-
-class TelegramPlatform(crosschat.Platform):
-    def __init__(self, crosschat):
-        super().__init__(crosschat)
-        self.name = "telegram"
-
+with open("./tokens/discord", "r") as f:
+    discordBotToken = f.read().strip()
+with open("./tokens/tg", "r") as f:
+    telegramBotToken = f.read().strip()
 
 app = crosschat.CrossChat()
-discord = discordPlatform.DiscordPlatform(app, botToken)
-discord.add_to_crosschat()
-telegram = TelegramPlatform(app)
-telegram.add_to_crosschat()
+discord = discordPlatform.DiscordPlatform(app, discordBotToken)
+telegram = telegramPlatform.TelegramPlatform(app, telegramBotToken)
+platform = crosschat.Platform(app, "test")
+platform.add_to_crosschat()
 
 channel = crosschat.Channel(app, "general")
 
 channel.set_id("discord", 1367251777606385777)
-channel.set_id("telegram", 200)
+channel.set_id("telegram", -4677825942)
 channel.set_extra_data(
     "discord_webhook",
     discord.make_webhook(
@@ -33,7 +28,19 @@ channel.set_extra_data(
 app.run()
 app.wait_for_platforms()
 
-
 print(app)
+
+message = crosschat.OriginalMessage(
+    app,
+    channel,
+    crosschat.User("kobosh", "koboshusername"),
+    "Hello world",
+    123456789,
+    platform,
+)
+
+wrapped_message = crosschat.Message(app,message)
+
+wrapped_message.broadcast()
 
 app.exit()

@@ -1,8 +1,6 @@
 import crosschat
-import telegram
 import threading
 from typing import Union, Optional, Any
-
 import telegram
 import telegram.ext
 
@@ -14,11 +12,7 @@ class TelegramPlatform(crosschat.Platform):
         super().__init__(crosschat=crosschat, name=name)
         self.name = name
         self.app = telegram.ext.Application.builder().token(token).build()
-        self.thread = threading.Thread(
-            target=self.app.run_polling,
-            kwargs={"allowed_updates": telegram.Update.ALL_TYPES},
-            daemon=True,
-        )
+        self.thread = self.app.run_polling(allowed_updates=telegram.Update.ALL_TYPES)
         self.running = False
         self.add_to_crosschat()
 
@@ -43,9 +37,10 @@ class TelegramPlatform(crosschat.Platform):
         self.thread.start()
 
     def exit(self):
-        self.app.stop()
+        task = self.crosschat.loop.create_task(self.app.stop())
+        self.crosschat.wait_for_task(task)
         self.thread.join()
         self.running = False
 
     def health_check(self):
-        return self.app.running
+        return self.app.running and self.running
