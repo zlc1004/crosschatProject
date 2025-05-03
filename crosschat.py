@@ -1,4 +1,4 @@
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, Coroutine
 import random
 import time
 import asyncio
@@ -187,7 +187,7 @@ class CrossChat:
         while not task.done():
             time.sleep(0.1)
 
-    def run_coroutine(self, coroutine: asyncio.coroutine) -> Any:
+    def run_coroutine(self, coroutine: Coroutine) -> Any:
         """
         Runs a coroutine in the event loop.
 
