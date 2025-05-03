@@ -3,6 +3,8 @@ import random
 import time
 import asyncio
 import threading
+from rich import print
+
 
 def override(func):
     """
@@ -37,10 +39,7 @@ class CrossChat:
         self.platforms: dict[str, "Platform"] = {}
         self.messages: list["Message"] = []
         self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(
-            target=self.loop.run_forever,
-            daemon=True
-        )
+        self.thread = threading.Thread(target=self.loop.run_forever, daemon=True)
         asyncio.set_event_loop(self.loop)
 
     def add_platform(self, name: str, platform: "Platform") -> None:
@@ -169,7 +168,6 @@ class CrossChat:
             print(f"Starting platform {platform.name}...")
             platform.run()
         print("Running CrossChat and all platforms...")
-        
 
     def exit(self) -> None:
         """
@@ -188,8 +186,8 @@ class CrossChat:
         """
         while not task.done():
             time.sleep(0.1)
-    
-    def run_coroutine(self, coroutine: asyncio.coroutine) -> None:
+
+    def run_coroutine(self, coroutine: asyncio.coroutine) -> Any:
         """
         Runs a coroutine in the event loop.
 
@@ -199,6 +197,7 @@ class CrossChat:
         future = asyncio.run_coroutine_threadsafe(coroutine, self.loop)
         self.wait_for_task(future)
         return future.result()
+
 
 class Platform:
     """
@@ -506,12 +505,14 @@ class User:
         """
         return f"User(display_name={self.display_name}, username={self.username})"
 
+
 class Attachment:
     """
     Represents an attachment in the CrossChat system.
     Attributes:
         file_url (str): The URL of the file attachment.
     """
+
     def __init__(self, file_url: str):
         """
         Initializes the Attachment instance.
@@ -520,7 +521,7 @@ class Attachment:
             file_url (str): The URL of the file attachment.
         """
         self.file_url = file_url
-    
+
     def __repr__(self) -> str:
         """
         Returns a string representation of the Attachment instance.
@@ -529,6 +530,7 @@ class Attachment:
             str: String representation of the Attachment instance.
         """
         return f"Attachment(file_url={self.file_url})"
+
 
 class OriginalMessage:
     """

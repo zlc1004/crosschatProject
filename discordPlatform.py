@@ -1,6 +1,7 @@
 import crosschat
 import discord
 from typing import Optional
+from rich import print
 
 class DiscordPlatform(crosschat.Platform):
     """
@@ -221,12 +222,12 @@ class DiscordPlatform(crosschat.Platform):
         """
         Starts the Discord client in a separate thread.
         """
-        discord.utils.setup_logging(
-                handler=discord.utils.MISSING,
-                formatter=discord.utils.MISSING,
-                level=discord.utils.MISSING,
-                root=False,
-            )
+        # discord.utils.setup_logging(
+        #         handler=discord.utils.MISSING,
+        #         formatter=discord.utils.MISSING,
+        #         level=discord.utils.MISSING,
+        #         root=False,
+        #     )
         # Start the Discord client in a separate thread
         self.task = self.crosschat.loop.create_task(self.runner(self.token))
     

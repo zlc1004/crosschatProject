@@ -9,6 +9,7 @@ import telegram._utils.warnings
 import platform
 import logging
 import threading
+from rich import print
 
 
 class TelegramPlatform(crosschat.Platform):
@@ -45,18 +46,18 @@ class TelegramPlatform(crosschat.Platform):
     def run(self):
         self.app.add_handler(telegram.ext.CommandHandler("start", self.start))
         self.app.add_handler(telegram.ext.CommandHandler("data", self.updateData))
-        self.makethread()
+        self.make_thread()
         self.thread.start()
 
-    def send_message(self, channel, content, user, reply = None, attachments = ...):
+    def send_message(self, channel, content, user, reply=None, attachments=...) -> int:
         coroutine = self.app.bot.send_message(
-                chat_id=channel.get_id(self.name),
-                text=f"{user.get_name()}:\n{content}"
+            chat_id=channel.get_id(self.name), text=f"{user.get_name()}:\n{content}"
         )
-        self.crosschat.run_coroutine(coroutine)
-    
+        result:telegram.Message = self.crosschat.run_coroutine(coroutine)
+        return result.message_id
+        
 
-    def makethread(self):
+    def make_thread(self):
         poll_interval: float = 0.0
         timeout: int = 10
         bootstrap_retries: int = 0
@@ -75,7 +76,7 @@ class TelegramPlatform(crosschat.Platform):
         def error_callback(exc: telegram.error.TelegramError) -> None:
             self.app.create_task(self.app.process_error(error=exc, update=None))
 
-        print("0")
+        # print("0")
         updater_coroutine = self.app.updater.start_polling(
             poll_interval=poll_interval,
             timeout=timeout,
@@ -128,24 +129,24 @@ class TelegramPlatform(crosschat.Platform):
             "Skipping adding signal handlers for the stop signals.",
             stacklevel=3,
         )
-        print("2")
+        # print("2")
         try:
             self.crosschat.run_coroutine(
                 self.app._bootstrap_initialize(max_retries=bootstrap_retries)
             )
-            print("3")
+            # print("3")
             if self.app.post_init:
                 self.crosschat.run_coroutine(self.app.post_init(self))
-                print("5")
+                # print("5")
             # if self.app.__stop_running_marker.is_set():
             #     self.app._LOGGER.info("Application received stop signal via `stop_running`. Shutting down.")
             #     return
             self.crosschat.run_coroutine(
                 updater_coroutine
             )  # one of updater.start_webhook/polling
-            print("7")
+            # print("7")
             self.crosschat.run_coroutine(self.app.start())
-            print("9")
+            # print("9")
             while self.app.running:
                 pass
         except (KeyboardInterrupt, SystemExit):
@@ -170,8 +171,7 @@ class TelegramPlatform(crosschat.Platform):
                 pass
 
     def exit(self):
-        task = self.crosschat.loop.create_task(self.app.stop())
-        self.crosschat.wait_for_task(task)
+        self.crosschat.run_coroutine(self.app.stop())
         self.thread.join()
         self.running = False
 

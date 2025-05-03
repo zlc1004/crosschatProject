@@ -1,6 +1,8 @@
 import crosschat
 import discordPlatform
 import telegramPlatform
+from rich import print
+
 
 with open("./tokens/discord", "r") as f:
     discordBotToken = f.read().strip()
@@ -10,18 +12,17 @@ with open("./tokens/tg", "r") as f:
 app = crosschat.CrossChat()
 print(app)
 telegram = telegramPlatform.TelegramPlatform(app, telegramBotToken)
-print("telegram")
+# print("telegram")
 discord = discordPlatform.DiscordPlatform(app, discordBotToken)
-print("discord")
+# print("discord")
 platform = crosschat.Platform(app, "test")
-print("platform")
+# print("platform")
 platform.add_to_crosschat()
 
-print("added to crosschat")
 print(app)
 
 channel = crosschat.Channel(app, "general")
-print("channel")
+# print("channel")
 
 channel.set_id("discord", 1367251777606385777)
 channel.set_id("telegram", -4677825942)
@@ -35,9 +36,9 @@ channel.set_extra_data(
 
 print(channel)
 
-print("running")
+# print("running")
 app.run()
-print("running")
+# print("running")
 app.wait_for_platforms()
 
 print(app)
@@ -51,8 +52,10 @@ message = crosschat.OriginalMessage(
     platform,
 )
 
-wrapped_message = crosschat.Message(app,message)
+wrapped_message = crosschat.Message(app, message)
 
 wrapped_message.broadcast()
+
+print(wrapped_message)
 
 app.exit()
