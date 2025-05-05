@@ -5,27 +5,20 @@ import telegram.ext
 import telegram._utils.types
 import telegram._utils.defaultvalue
 import signal
-import telegram._utils.warnings
-import platform
-import logging
 import threading
+import platform
 from rich import print
 
 
 class TelegramPlatform(crosschat.Platform):
     def __init__(
-        self, crosschat: crosschat.CrossChat, token: str, name: str = "telegram"
+        self, crosschat: crosschat.CrossChat, token: str, name: str = "telegram", 
     ):
         super().__init__(crosschat=crosschat, name=name)
         self.name = name
         self.app = telegram.ext.Application.builder().token(token).build()
         self.add_to_crosschat()
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            level=logging.INFO,
-        )
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-        self.logger = logging.getLogger(__name__)
+        self.logger = crosschat.logger
         self.thread = None
 
     async def start(
@@ -49,13 +42,15 @@ class TelegramPlatform(crosschat.Platform):
         self.make_thread()
         self.thread.start()
 
-    def send_message(self, channel, content, user, reply=None, attachments=...) -> int:
+    def send_message(self, channel, content, user, reply=None, attachments=[]) -> int:
         coroutine = self.app.bot.send_message(
             chat_id=channel.get_id(self.name), text=f"{user.get_name()}:\n{content}"
         )
+        print(coroutine)
+        print(f"Sending message to {self.name} channel {channel.get_id(self.name)}")
         result:telegram.Message = self.crosschat.run_coroutine(coroutine)
+        print(f"Message sent to {self.name} channel {channel.get_id(self.name)}")
         return result.message_id
-        
 
     def make_thread(self):
         poll_interval: float = 0.0
@@ -125,7 +120,7 @@ class TelegramPlatform(crosschat.Platform):
         #         " please pass `stop_signals=None`.",
         #         stacklevel=3,
         #     )
-        telegram._utils.warnings.warn(
+        self.logger.warning(
             "Skipping adding signal handlers for the stop signals.",
             stacklevel=3,
         )
@@ -150,7 +145,7 @@ class TelegramPlatform(crosschat.Platform):
             while self.app.running:
                 pass
         except (KeyboardInterrupt, SystemExit):
-            self.app._LOGGER.debug("Application received stop signal. Shutting down.")
+            self.logger.info("Application received stop signal. Shutting down.")
         finally:
             # We arrive here either by catching the exceptions above or if the loop gets stopped
             # In case the coroutine wasn't awaited, we don't need to bother the user with a warning

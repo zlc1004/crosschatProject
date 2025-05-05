@@ -3,6 +3,8 @@ import random
 import time
 import asyncio
 import threading
+import rich.logging
+import logging
 from rich import print
 
 
@@ -41,6 +43,15 @@ class CrossChat:
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self.loop.run_forever, daemon=True)
         asyncio.set_event_loop(self.loop)
+        logging.basicConfig(
+            format="%(name)s - %(message)s",
+            level=logging.INFO,
+            handlers=[rich.logging.RichHandler()],
+        )
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        self.logger = logging.getLogger(__name__)
+        self.console = rich.get_console()
+        self.logger.info("CrossChat initialized.")
 
     def add_platform(self, name: str, platform: "Platform") -> None:
         """
@@ -154,20 +165,22 @@ class CrossChat:
         """
         for platform in self.platforms.values():
             while not platform.health_check():
-                print(f"Waiting for platform {platform.name} to be healthy...")
+                self.logger.info(
+                    f"Waiting for platform {platform.name} to be healthy..."
+                )
                 time.sleep(1)
-        print("All platforms are healthy!")
+        self.logger.info("All platforms are healthy!")
 
     def run(self) -> None:
         """
         Starts all platforms and runs the CrossChat system.
         """
         self.thread.start()
-        print("Starting CrossChat and all platforms...")
+        self.logger.info("Starting CrossChat and all platforms...")
         for platform in self.platforms.values():
-            print(f"Starting platform {platform.name}...")
+            self.logger.info(f"Starting platform {platform.name}...")
             platform.run()
-        print("Running CrossChat and all platforms...")
+        self.logger.info("Running CrossChat and all platforms...")
 
     def exit(self) -> None:
         """
@@ -175,7 +188,7 @@ class CrossChat:
         """
         for platform in self.platforms.values():
             platform.exit()
-        print("Exiting CrossChat and closing all platforms...")
+        self.logger.info("Exiting CrossChat and closing all platforms...")
 
     def wait_for_task(self, task: asyncio.Task) -> None:
         """
@@ -195,9 +208,8 @@ class CrossChat:
             coroutine (asyncio.coroutine): The coroutine to run.
         """
         future = asyncio.run_coroutine_threadsafe(coroutine, self.loop)
-        self.wait_for_task(future)
-        return future.result()
-
+        # self.wait_for_task(future)
+        return future.result(timeout=5)
 
 class Platform:
     """
@@ -240,7 +252,7 @@ class Platform:
         """
         messageId = message.get_id(self.name)
         channelId = channel.get_id(self.name)
-        print(
+        self.crosschat.logger.info(
             f"Editing message {messageId} in channel {channelId} on platform {self.name} to {newContent}"
         )
 
@@ -255,7 +267,7 @@ class Platform:
         """
         messageId = message.get_id(self.name)
         channelId = channel.get_id(self.name)
-        print(
+        self.crosschat.logger.info(
             f"Deleting message {messageId} in channel {channelId} on platform {self.name}"
         )
 
@@ -281,18 +293,18 @@ class Platform:
             int: The ID of the sent message.
         """
         channelId = channel.get_id(self.name)
-        print(
+        self.crosschat.logger.info(
             f"Sending message in channel {channelId} on platform {self.name} "
             f"with content '{content}' by {user.name}"
         )
         if reply:
             replyId = reply.get_id(self.name)
-            print(
+            self.crosschat.logger.info(
                 f"Replying to message {replyId} on platform {reply.platform.name} from {reply.user.get_name()} with content '{reply.content}'"
             )
         if attachments:
             for attachment in attachments:
-                print(f"Sending attachment: {attachment.file_url}")
+                self.crosschat.logger.info(f"Sending attachment: {attachment.file_url}")
         return random.randint(100000, 999999)  # Simulated message ID
 
     @override
@@ -306,7 +318,7 @@ class Platform:
         """
         messageId = message.get_id(self.name)
         channelId = channel.get_id(self.name)
-        print(
+        self.crosschat.logger.info(
             f"Getting message {messageId} in channel {channelId} on platform {self.name}"
         )
 
@@ -324,7 +336,7 @@ class Platform:
         """
         Starts the platform.
         """
-        print(f"Running platform {self.name}...")
+        self.crosschat.logger.info(f"Running platform {self.name}...")
         pass
 
     @override
@@ -332,7 +344,7 @@ class Platform:
         """
         Exits the platform and performs cleanup.
         """
-        print(f"Exiting platform {self.name}...")
+        self.crosschat.logger.info(f"Exiting platform {self.name}...")
         pass
 
     @override
@@ -343,7 +355,9 @@ class Platform:
         Returns:
             bool: True if the platform is healthy, otherwise False.
         """
-        print(f"Performing health check for platform {self.name}...")
+        self.crosschat.logger.info(
+            f"Performing health check for platform {self.name}..."
+        )
         return True
 
 
@@ -700,6 +714,7 @@ class Message:
             f"content={self.content}, ids={self.ids}), "
             f"OriginalMessage={self.originalMessage}"
         )
+    
 
 
 def main():

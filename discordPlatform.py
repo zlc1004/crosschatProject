@@ -48,7 +48,7 @@ class DiscordPlatform(crosschat.Platform):
 
         Prints the bot's username and sets the running status to True.
         """
-        print(f"Logged in as {self.client.user}")
+        self.crosschat.logger.info(f"Logged in as {self.client.user}")
         self.running = True
 
     async def on_message(self, message: discord.Message):
@@ -58,12 +58,15 @@ class DiscordPlatform(crosschat.Platform):
         Args:
             message (discord.Message): The message object received from Discord.
         """
+        # print(f"Received message: {message.content}")
+        # print(message)
         # Ignore messages from the bot itself
         if message.author == self.client.user:
             return
 
         # Get the corresponding channel in CrossChat
         channel = self.crosschat.get_channel(message.channel.id, self.name)
+        # print(f"Channel: {channel}")
         if channel:
             # Get the corresponding user in CrossChat
             user = crosschat.User(message.author.display_name, message.author.name)
@@ -81,6 +84,7 @@ class DiscordPlatform(crosschat.Platform):
             wrapped_msg = crosschat.Message(self.crosschat, original_msg)
             # Broadcast the message
             wrapped_msg.broadcast()
+            print(wrapped_msg)
 
     def make_webhook(self, id: int, token: str) -> None:
         """
@@ -121,7 +125,7 @@ class DiscordPlatform(crosschat.Platform):
         if discord_channel:
             webhook: discord.Webhook = channel.get_extra_data("discord_webhook")
             if not webhook:
-                print(f"Webhook not found in channel {channel}.")
+                self.crosschat.logger.error(f"Webhook not found in channel {channel}.")
                 return 0
             message: discord.WebhookMessage = webhook.send(
                 content=self.crosschat.make_reply_str(reply) + content,
@@ -136,10 +140,10 @@ class DiscordPlatform(crosschat.Platform):
                     username=user.get_name(),
                     avatar_url=user.get_profile_picture(),
                 )
-                print(
+                self.crosschat.logger.info(
                     f"Uploaded attachment: '{attachment.file_url}' in channel {channel} on Discord."
                 )
-            print(
+            self.crosschat.logger.info(
                 f"Sent message: '{content}' in channel {channel} on Discord. ID: {message_id}"
             )
             return message_id  # Returning the message ID
@@ -163,7 +167,7 @@ class DiscordPlatform(crosschat.Platform):
             message: discord.WebhookMessage = webhook.edit_message(
                 message_id=message.get_id(self.name), content=new_content
             )
-            print(f"Edited message with ID {message.id} to: '{message.content}'")
+            self.crosschat.logger.info(f"Edited message with ID {message.id} to: '{message.content}'")
 
     def delete_message(
         self,
@@ -182,7 +186,7 @@ class DiscordPlatform(crosschat.Platform):
         if discord_channel:
             webhook: discord.Webhook = channel.get_extra_data("discord_webhook")
             webhook.delete_message(message.get_id(self.name))
-            print(f"Deleted message with ID {message.get_id(self.name)}")
+            self.crosschat.logger.info(f"Deleted message with ID {message.get_id(self.name)}")
 
     def get_message(
         self,
@@ -244,9 +248,9 @@ class DiscordPlatform(crosschat.Platform):
         """
         Stops the Discord client and terminates the thread.
         """
-        print("Stopping Discord client...")
+        self.crosschat.logger.info("Stopping Discord client...")
         t = self.crosschat.loop.create_task(self.client.close())
         self.crosschat.wait_for_task(t)
         self.task.cancel()
-        print("Discord client stopped.")
+        self.crosschat.logger.info("Discord client stopped.")
         self.running = False

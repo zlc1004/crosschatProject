@@ -1,4 +1,5 @@
 import crosschat
+from rich import print
 
 cc = crosschat.CrossChat()
 

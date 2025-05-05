@@ -36,6 +36,8 @@ channel.set_extra_data(
 
 print(channel)
 
+app.add_channel(channel)
+
 # print("running")
 app.run()
 # print("running")
@@ -58,4 +60,3 @@ wrapped_message.broadcast()
 
 print(wrapped_message)
 
-app.exit()
