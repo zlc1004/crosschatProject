@@ -36,11 +36,6 @@ class DiscordPlatform(crosschat.Platform):
         self.running = False
         self.add_to_crosschat()
         self.task = None
-        
-
-    async def runner(self, token: str):
-        async with self.client:
-            await self.client.start(token, reconnect=True)
 
     async def on_ready(self):
         """
@@ -59,7 +54,6 @@ class DiscordPlatform(crosschat.Platform):
             message (discord.Message): The message object received from Discord.
         """
         # print(f"Received message: {message.content}")
-        # print(message)
         # Ignore messages from the bot itself
         if message.author == self.client.user:
             return
@@ -83,7 +77,7 @@ class DiscordPlatform(crosschat.Platform):
             )
             wrapped_msg = crosschat.Message(self.crosschat, original_msg)
             # Broadcast the message
-            wrapped_msg.broadcast()
+            await wrapped_msg.broadcast()
             print(wrapped_msg)
 
     def make_webhook(self, id: int, token: str) -> None:
@@ -99,7 +93,7 @@ class DiscordPlatform(crosschat.Platform):
         """
         return discord.SyncWebhook.partial(id=id, token=token)
 
-    def send_message(
+    async def send_message(
         self,
         channel: crosschat.Channel,
         content: str,
@@ -149,7 +143,7 @@ class DiscordPlatform(crosschat.Platform):
             return message_id  # Returning the message ID
         return 0  # In case the channel is not found
 
-    def edit_message(
+    async def edit_message(
         self, channel: crosschat.Channel, message: crosschat.Message, new_content: str
     ) -> None:
         """
@@ -169,7 +163,7 @@ class DiscordPlatform(crosschat.Platform):
             )
             self.crosschat.logger.info(f"Edited message with ID {message.id} to: '{message.content}'")
 
-    def delete_message(
+    async def delete_message(
         self,
         channel: crosschat.Channel,
         message: crosschat.Message,
@@ -188,7 +182,7 @@ class DiscordPlatform(crosschat.Platform):
             webhook.delete_message(message.get_id(self.name))
             self.crosschat.logger.info(f"Deleted message with ID {message.get_id(self.name)}")
 
-    def get_message(
+    async def get_message(
         self,
         channel: crosschat.Channel,
         message: crosschat.Message,
@@ -222,7 +216,7 @@ class DiscordPlatform(crosschat.Platform):
             return wrapped_msg
         return None
 
-    def run(self) -> None:
+    async def run(self) -> None:
         """
         Starts the Discord client in a separate thread.
         """
@@ -233,7 +227,7 @@ class DiscordPlatform(crosschat.Platform):
         #         root=False,
         #     )
         # Start the Discord client in a separate thread
-        self.task = self.crosschat.loop.create_task(self.runner(self.token))
+        await self.client.start(self.token, reconnect=True)
     
     def health_check(self) -> bool:
         """
@@ -244,13 +238,11 @@ class DiscordPlatform(crosschat.Platform):
         """
         return self.running and self.client.is_ready()
 
-    def exit(self):
+    async def exit(self):
         """
         Stops the Discord client and terminates the thread.
         """
         self.crosschat.logger.info("Stopping Discord client...")
-        t = self.crosschat.loop.create_task(self.client.close())
-        self.crosschat.wait_for_task(t)
-        self.task.cancel()
+        await self.client.close()
         self.crosschat.logger.info("Discord client stopped.")
         self.running = False

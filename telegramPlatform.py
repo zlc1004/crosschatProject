@@ -79,10 +79,10 @@ class TelegramPlatform(crosschat.Platform):
             drop_pending_updates=drop_pending_updates,
             error_callback=error_callback,  # if there is an error in fetching updates
         )
-        return self.__run(**{"updater_coroutine": updater_coroutine,
-                "stop_signals": stop_signals,
-                "bootstrap_retries": bootstrap_retries,
-                "close_loop": close_loop})
+        return self.__run(updater_coroutine=updater_coroutine,
+                stop_signals=stop_signals,
+                bootstrap_retries=bootstrap_retries,
+                close_loop=close_loop)
 
     async def __run(
         self,
@@ -101,21 +101,17 @@ class TelegramPlatform(crosschat.Platform):
             stacklevel=3,
         )
         try:
-            self.crosschat.run_coroutine(
-                self.app._bootstrap_initialize(max_retries=bootstrap_retries)
-            )
+            await self.app._bootstrap_initialize(max_retries=bootstrap_retries)
             # print("3")
             if self.app.post_init:
-                self.crosschat.run_coroutine(self.app.post_init(self))
+                await self.app.post_init(self)
                 # print("5")
             # if self.app.__stop_running_marker.is_set():
             #     self.app._LOGGER.info("Application received stop signal via `stop_running`. Shutting down.")
             #     return
-            self.crosschat.run_coroutine(
-                updater_coroutine
-            )  # one of updater.start_webhook/polling
+            await updater_coroutine  # one of updater.start_webhook/polling
             # print("7")
-            self.crosschat.run_coroutine(self.app.start())
+            await self.app.start()
             # print("9")
             while self.app.running:
                 pass
@@ -128,15 +124,15 @@ class TelegramPlatform(crosschat.Platform):
             try:
                 # Mypy doesn't know that we already check if updater is None
                 if self.app.updater.running:  # type: ignore[union-attr]
-                    self.crosschat.run_coroutine(self.app.updater.stop())  # type: ignore[union-attr]
+                    await self.app.updater.stop()  # type: ignore[union-attr]
                 if self.app.running:
-                    self.crosschat.run_coroutine(self.app.stop())
+                    await self.app.stop()  # type: ignore[union-attr]
                     # post_stop should be called only if stop was called!
                     if self.app.post_stop:
-                        self.crosschat.run_coroutine(self.app.post_stop(self.app))
-                self.crosschat.run_coroutine(self.app.shutdown())
+                        await self.app.post_stop(self.app)
+                await self.app.shutdown()
                 if self.app.post_shutdown:
-                    self.crosschat.run_coroutine(self.app.post_shutdown(self.app))
+                    await self.app.post_shutdown(self.app)
             finally:
                 pass
 

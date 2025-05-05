@@ -41,7 +41,7 @@ class CrossChat:
         self.platforms: dict[str, "Platform"] = {}
         self.messages: list["Message"] = []
         self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(target=self.loop.run_forever, daemon=True)
+        self.thread = threading.Thread(target=self.loop.run_until_complete, args=(self.runner(),), daemon=True)
         asyncio.set_event_loop(self.loop)
         logging.basicConfig(
             format="%(name)s - %(message)s",
@@ -159,7 +159,7 @@ class CrossChat:
             f"messages={self.messages}, platforms={self.platforms})"
         )
 
-    async def wait_for_platforms(self) -> None:
+    def wait_for_platforms(self) -> None:
         """
         Waits for all platforms to pass their health checks.
         """
@@ -171,15 +171,19 @@ class CrossChat:
                 time.sleep(1)
         self.logger.info("All platforms are healthy!")
 
+    async def runner(self) -> None:
+        async with asyncio.TaskGroup() as task_group:
+            for platform in self.platforms.values():
+                self.logger.info(f"Starting platform {platform.name}...")
+                task_group.create_task(platform.run())
+            self.logger.info("All platforms have been started.")
+
     def run(self) -> None:
         """
         Starts all platforms and runs the CrossChat system.
         """
-        self.thread.start()
         self.logger.info("Starting CrossChat and all platforms...")
-        for platform in self.platforms.values():
-            self.logger.info(f"Starting platform {platform.name}...")
-            self.tasks.append(asyncio.run_coroutine_threadsafe(platform.run(),loop=self.loop))
+        self.thread.start()
         self.logger.info("Running CrossChat and all platforms...")
 
     async def exit(self) -> None:
@@ -192,17 +196,29 @@ class CrossChat:
         for task in self.tasks:
             task.cancel()
 
-    def run_coroutine(self, coroutine: Coroutine) -> Any:
+    def run_coroutine(self, coroutine) -> Any:
         """
         Runs a coroutine in the event loop.
 
         Args:
             coroutine (asyncio.coroutine): The coroutine to run.
         """
-        future = asyncio.run_coroutine_threadsafe(coroutine, self.loop)
-        # self.wait_for_task(future)
-        return future.result(timeout=5)
+        future = self.loop.create_task(coroutine)
+        asyncio.wait(future)
+        return future.result()
 
+    def coroutine_to_future(self, coroutine: Coroutine) -> asyncio.Future:
+        """
+        Converts a coroutine to a future.
+
+        Args:
+            coroutine (Coroutine): The coroutine to convert.
+
+        Returns:
+            asyncio.Future: The future object representing the coroutine.
+        """
+        return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+    
 class Platform:
     """
     Represents a communication platform in the CrossChat system.
@@ -329,7 +345,7 @@ class Platform:
         Starts the platform.
         """
         self.crosschat.logger.info(f"Running platform {self.name}...")
-        pass
+        while True:pass
 
     @override
     async def exit(self) -> None:
