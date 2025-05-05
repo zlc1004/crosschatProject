@@ -36,23 +36,22 @@ class TelegramPlatform(crosschat.Platform):
     ) -> None:
         await update.message.reply_text(update.effective_chat.id)
 
-    def run(self):
+    async def run(self):
         self.app.add_handler(telegram.ext.CommandHandler("start", self.start))
         self.app.add_handler(telegram.ext.CommandHandler("data", self.updateData))
-        self.make_thread()
-        self.thread.start()
+        await self.make_runner()
 
-    def send_message(self, channel, content, user, reply=None, attachments=[]) -> int:
+    async def send_message(self, channel: "Channel", content: str, user: "User", reply: Optional["OriginalMessage"] = None, attachments: list["Attachment"] = []) -> int:
         coroutine = self.app.bot.send_message(
             chat_id=channel.get_id(self.name), text=f"{user.get_name()}:\n{content}"
         )
         print(coroutine)
         print(f"Sending message to {self.name} channel {channel.get_id(self.name)}")
-        result:telegram.Message = self.crosschat.run_coroutine(coroutine)
+        result: telegram.Message = await coroutine
         print(f"Message sent to {self.name} channel {channel.get_id(self.name)}")
         return result.message_id
 
-    def make_thread(self):
+    def make_runner(self):
         poll_interval: float = 0.0
         timeout: int = 10
         bootstrap_retries: int = 0
@@ -80,51 +79,27 @@ class TelegramPlatform(crosschat.Platform):
             drop_pending_updates=drop_pending_updates,
             error_callback=error_callback,  # if there is an error in fetching updates
         )
-
-        self.thread = threading.Thread(
-            target=self.__run,
-            kwargs={
-                "updater_coroutine": updater_coroutine,
+        return self.__run(**{"updater_coroutine": updater_coroutine,
                 "stop_signals": stop_signals,
                 "bootstrap_retries": bootstrap_retries,
-                "close_loop": close_loop,
-            },
-        )
+                "close_loop": close_loop})
 
-    def __run(
+    async def __run(
         self,
         updater_coroutine: Coroutine,
         stop_signals: telegram._utils.types.ODVInput[Sequence[int]],
         bootstrap_retries: int,
         close_loop: bool = True,
     ) -> None:
-        # Calling get_event_loop() should still be okay even in py3.10+ as long as there is a
-        # running event loop, or we are in the main thread, which are the intended use cases.
-        # See the docs of get_event_loop() and get_running_loop() for more info
-        loop = self.crosschat.loop
-
         if (
             stop_signals is telegram._utils.defaultvalue.DEFAULT_NONE
             and platform.system() != "Windows"
         ):
             stop_signals = (signal.SIGINT, signal.SIGTERM, signal.SIGABRT)
-        # print("1")
-        # try:
-        #     if not isinstance(stop_signals, telegram._utils.defaultvalue.DefaultValue):
-        #         for sig in stop_signals or []:
-        #             loop.add_signal_handler(sig, self.app._raise_system_exit)
-        # except NotImplementedError as exc:
-        #     telegram._utils.warnings.warn(
-        #         f"Could not add signal handlers for the stop signals {stop_signals} due to "
-        #         f"exception `{exc!r}`. If your event loop does not implement `add_signal_handler`,"
-        #         " please pass `stop_signals=None`.",
-        #         stacklevel=3,
-        #     )
         self.logger.warning(
             "Skipping adding signal handlers for the stop signals.",
             stacklevel=3,
         )
-        # print("2")
         try:
             self.crosschat.run_coroutine(
                 self.app._bootstrap_initialize(max_retries=bootstrap_retries)
@@ -165,9 +140,8 @@ class TelegramPlatform(crosschat.Platform):
             finally:
                 pass
 
-    def exit(self):
-        self.crosschat.run_coroutine(self.app.stop())
-        self.thread.join()
+    async def exit(self):
+        await self.app.stop()
         self.running = False
 
     def health_check(self):

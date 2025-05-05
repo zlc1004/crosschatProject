@@ -51,6 +51,7 @@ class CrossChat:
         logging.getLogger("httpx").setLevel(logging.WARNING)
         self.logger = logging.getLogger(__name__)
         self.logger.info("CrossChat initialized.")
+        self.tasks = []
 
     def add_platform(self, name: str, platform: "Platform") -> None:
         """
@@ -178,7 +179,7 @@ class CrossChat:
         self.logger.info("Starting CrossChat and all platforms...")
         for platform in self.platforms.values():
             self.logger.info(f"Starting platform {platform.name}...")
-            asyncio.run_coroutine_threadsafe(platform.run(),loop=self.loop)
+            self.tasks.append(asyncio.run_coroutine_threadsafe(platform.run(),loop=self.loop))
         self.logger.info("Running CrossChat and all platforms...")
 
     async def exit(self) -> None:
@@ -188,6 +189,8 @@ class CrossChat:
         for platform in self.platforms.values():
             await platform.exit()
         self.logger.info("Exiting CrossChat and closing all platforms...")
+        for task in self.tasks:
+            task.cancel()
 
     def run_coroutine(self, coroutine: Coroutine) -> Any:
         """
@@ -653,7 +656,7 @@ class Message:
         key = platform if isinstance(platform, str) else platform.name
         self.ids[key] = id
 
-    def broadcast(self) -> None:
+    async def broadcast(self) -> None:
         """
         Broadcasts the message to all platforms except the one it originated from.
         """
@@ -666,12 +669,12 @@ class Message:
         for platformName in platforms:
             platform = self.crosschat.get_platform(platformName)
             if platform is not None:
-                returnedId = platform.send_message(
+                returnedId = await platform.send_message(
                     self.channel, self.content, self.user, self.reply
                 )
                 self.set_id(platform.name, returnedId)
 
-    def edit(self, newContent: str) -> None:
+    async def edit(self, newContent: str) -> None:
         """
         Edits the message content across all platforms.
 
@@ -680,16 +683,16 @@ class Message:
         """
         platforms = self.crosschat.platforms.values()
         for platform in platforms:
-            platform.edit_message(self.channel, self, newContent)
+            await platform.edit_message(self.channel, self, newContent)
         self.content = newContent
 
-    def delete(self) -> None:
+    async def delete(self) -> None:
         """
         Deletes the message from all platforms.
         """
         platforms = self.crosschat.platforms.values()
         for platform in platforms:
-            platform.delete_message(self.channel, self)
+            await platform.delete_message(self.channel, self)
 
     def __repr__(self) -> str:
         """
