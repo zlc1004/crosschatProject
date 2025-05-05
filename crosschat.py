@@ -50,7 +50,6 @@ class CrossChat:
         )
         logging.getLogger("httpx").setLevel(logging.WARNING)
         self.logger = logging.getLogger(__name__)
-        self.console = rich.get_console()
         self.logger.info("CrossChat initialized.")
 
     def add_platform(self, name: str, platform: "Platform") -> None:
@@ -159,7 +158,7 @@ class CrossChat:
             f"messages={self.messages}, platforms={self.platforms})"
         )
 
-    def wait_for_platforms(self) -> None:
+    async def wait_for_platforms(self) -> None:
         """
         Waits for all platforms to pass their health checks.
         """
@@ -179,26 +178,16 @@ class CrossChat:
         self.logger.info("Starting CrossChat and all platforms...")
         for platform in self.platforms.values():
             self.logger.info(f"Starting platform {platform.name}...")
-            platform.run()
+            asyncio.run_coroutine_threadsafe(platform.run(),loop=self.loop)
         self.logger.info("Running CrossChat and all platforms...")
 
-    def exit(self) -> None:
+    async def exit(self) -> None:
         """
         Exits all platforms and shuts down the CrossChat system.
         """
         for platform in self.platforms.values():
-            platform.exit()
+            await platform.exit()
         self.logger.info("Exiting CrossChat and closing all platforms...")
-
-    def wait_for_task(self, task: asyncio.Task) -> None:
-        """
-        Waits for a specific task to complete.
-
-        Args:
-            task (asyncio.Task): The task to wait for.
-        """
-        while not task.done():
-            time.sleep(0.1)
 
     def run_coroutine(self, coroutine: Coroutine) -> Any:
         """
@@ -239,7 +228,7 @@ class Platform:
         self.crosschat.add_platform(self.name, self)
 
     @override
-    def edit_message(
+    async def edit_message(
         self, channel: "Channel", message: "Message", newContent: str
     ) -> None:
         """
@@ -257,7 +246,7 @@ class Platform:
         )
 
     @override
-    def delete_message(self, channel: "Channel", message: "Message") -> None:
+    async def delete_message(self, channel: "Channel", message: "Message") -> None:
         """
         Deletes a message from the platform.
 
@@ -272,7 +261,7 @@ class Platform:
         )
 
     @override
-    def send_message(
+    async def send_message(
         self,
         channel: "Channel",
         content: str,
@@ -308,7 +297,7 @@ class Platform:
         return random.randint(100000, 999999)  # Simulated message ID
 
     @override
-    def get_message(self, channel: "Channel", message: "Message") -> None:
+    async def get_message(self, channel: "Channel", message: "Message") -> None:
         """
         Retrieves a message from the platform.
 
@@ -332,7 +321,7 @@ class Platform:
         return f"Platform(name={self.name})"
 
     @override
-    def run(self) -> None:
+    async def run(self) -> None:
         """
         Starts the platform.
         """
@@ -340,7 +329,7 @@ class Platform:
         pass
 
     @override
-    def exit(self) -> None:
+    async def exit(self) -> None:
         """
         Exits the platform and performs cleanup.
         """
