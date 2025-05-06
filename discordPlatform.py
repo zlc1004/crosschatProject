@@ -3,6 +3,7 @@ import discord
 from typing import Optional
 from rich import print
 
+
 class DiscordPlatform(crosschat.Platform):
     """
     A platform implementation for Discord, integrating with the CrossChat framework.
@@ -161,7 +162,9 @@ class DiscordPlatform(crosschat.Platform):
             message: discord.WebhookMessage = webhook.edit_message(
                 message_id=message.get_id(self.name), content=new_content
             )
-            self.crosschat.logger.info(f"Edited message with ID {message.id} to: '{message.content}'")
+            self.crosschat.logger.info(
+                f"Edited message with ID {message.id} to: '{message.content}'"
+            )
 
     async def delete_message(
         self,
@@ -180,7 +183,9 @@ class DiscordPlatform(crosschat.Platform):
         if discord_channel:
             webhook: discord.Webhook = channel.get_extra_data("discord_webhook")
             webhook.delete_message(message.get_id(self.name))
-            self.crosschat.logger.info(f"Deleted message with ID {message.get_id(self.name)}")
+            self.crosschat.logger.info(
+                f"Deleted message with ID {message.get_id(self.name)}"
+            )
 
     async def get_message(
         self,
@@ -228,7 +233,7 @@ class DiscordPlatform(crosschat.Platform):
         #     )
         # Start the Discord client in a separate thread
         await self.client.start(self.token, reconnect=True)
-    
+
     def health_check(self) -> bool:
         """
         Performs a health check to determine if the platform is running.

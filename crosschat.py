@@ -41,7 +41,9 @@ class CrossChat:
         self.platforms: dict[str, "Platform"] = {}
         self.messages: list["Message"] = []
         self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(target=self.loop.run_until_complete, args=(self.runner(),), daemon=True)
+        self.thread = threading.Thread(
+            target=self.loop.run_until_complete, args=(self.runner(),), daemon=True
+        )
         asyncio.set_event_loop(self.loop)
         logging.basicConfig(
             format="%(name)s - %(message)s",
@@ -172,11 +174,10 @@ class CrossChat:
         self.logger.info("All platforms are healthy!")
 
     async def runner(self) -> None:
-        async with asyncio.TaskGroup() as task_group:
-            for platform in self.platforms.values():
-                self.logger.info(f"Starting platform {platform.name}...")
-                task_group.create_task(platform.run())
-            self.logger.info("All platforms have been started.")
+        for platform in self.platforms.values():
+            self.logger.info(f"Starting platform {platform.name}...")
+            asyncio.create_task(platform.run())
+        self.logger.info("All platforms have been started.")
 
     def run(self) -> None:
         """
@@ -218,7 +219,8 @@ class CrossChat:
             asyncio.Future: The future object representing the coroutine.
         """
         return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
-    
+
+
 class Platform:
     """
     Represents a communication platform in the CrossChat system.
@@ -345,7 +347,8 @@ class Platform:
         Starts the platform.
         """
         self.crosschat.logger.info(f"Running platform {self.name}...")
-        while True:pass
+        while True:
+            pass
 
     @override
     async def exit(self) -> None:
@@ -722,7 +725,6 @@ class Message:
             f"content={self.content}, ids={self.ids}), "
             f"OriginalMessage={self.originalMessage}"
         )
-    
 
 
 def main():

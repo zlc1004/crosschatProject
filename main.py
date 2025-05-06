@@ -3,25 +3,31 @@ from rich import print
 
 cc = crosschat.CrossChat()
 
+
 class DiscordPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "discord"
+
 
 class SlackPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "slack"
 
+
 class TelegramPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "telegram"
 
+
 class GoogleChatPlatform(crosschat.Platform):
     def __init__(self, crosschat):
         super().__init__(crosschat)
         self.name = "google_chat"
+
+
 discord = DiscordPlatform(cc)
 slack = SlackPlatform(cc)
 telegram = TelegramPlatform(cc)
@@ -41,7 +47,9 @@ cc.add_channel(discord_channel)
 user = crosschat.User("Alice", "alice123")
 cc.add_user(user)
 # Step 5: Create and add original message
-original_msg = crosschat.OriginalMessage(cc, discord_channel, user, "Hello from Discord!", 123, discord)
+original_msg = crosschat.OriginalMessage(
+    cc, discord_channel, user, "Hello from Discord!", 123, discord
+)
 # Step 6: Wrap message and broadcast
 message = crosschat.Message(cc, original_msg)
 cc.add_message(message)

@@ -32,7 +32,7 @@ channel.set_extra_data(
         "1367254260684951602",
         "WP_XlVsegZi1G7MtVGcBcMr6x2zLx3lK16t13bDLvkQDkdbUD_tAK-nRgSpz-NAVDtHy",
     ),
-)
+) # opps here is my webhook lol
 
 print(channel)
 
@@ -59,4 +59,3 @@ wrapped_message = crosschat.Message(app, message)
 wrapped_message.broadcast()
 
 print(wrapped_message)
-
